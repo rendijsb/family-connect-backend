@@ -1,25 +1,31 @@
 name: family-connect-backend
 services:
   - name: web
-    dockerfile_path: Dockerfile.prod
     source_dir: /
     github:
       repo: rendijsb/family-connect-backend
       branch: main
+    run_command: heroku-php-apache2 public/
+    environment_slug: php
     instance_count: 1
     instance_size_slug: basic-xxs
     http_port: 8080
     routes:
       - path: /
     health_check:
-      http_path: /ping  # Use simple ping endpoint instead of /health
+      http_path: /
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
     envs:
       - key: APP_NAME
         value: "Family Connect"
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: "true"
+        value: "false"
       - key: APP_URL
         value: "https://family-connect-9eh59.ondigitalocean.app"
       - key: LOG_CHANNEL
@@ -27,11 +33,11 @@ services:
       - key: LOG_STDERR_FORMATTER
         value: Monolog\Formatter\JsonFormatter
       - key: SESSION_DRIVER
-        value: file  # Use file instead of database
+        value: database
       - key: CACHE_DRIVER
-        value: file   # Use file instead of database
+        value: database
       - key: QUEUE_CONNECTION
-        value: sync   # Use sync instead of database
+        value: database
       - key: BROADCAST_DRIVER
         value: log
       - key: FILESYSTEM_DISK
@@ -62,11 +68,18 @@ services:
         value: "50MB"
       - key: IOS_IPA_SIZE
         value: "60MB"
-      # Database Configuration (SQLite for testing)
       - key: DB_CONNECTION
-        value: "sqlite"
+        value: "pgsql"
+      - key: DB_HOST
+        value: "${family-connect-db.HOSTNAME}"
+      - key: DB_PORT
+        value: "${family-connect-db.PORT}"
       - key: DB_DATABASE
-        value: "/tmp/database.sqlite"
+        value: "${family-connect-db.DATABASE}"
+      - key: DB_USERNAME
+        value: "${family-connect-db.USERNAME}"
+      - key: DB_PASSWORD
+        value: "${family-connect-db.PASSWORD}"
       # Secrets
       - key: APP_KEY
         scope: RUN_AND_BUILD_TIME
@@ -77,3 +90,18 @@ services:
       - key: AWS_SECRET_ACCESS_KEY
         scope: RUN_AND_BUILD_TIME
         type: SECRET
+
+databases:
+  - name: family-connect-db
+    engine: PG
+    version: "13"
+
+jobs:
+  - name: migrate
+    source_dir: /
+    github:
+      repo: rendijsb/family-connect-backend
+      branch: main
+    environment_slug: php
+    run_command: php artisan migrate --force && php artisan db:seed --force
+    kind: PRE_DEPLOY
