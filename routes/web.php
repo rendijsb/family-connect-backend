@@ -7,6 +7,17 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| All routes in this file automatically use the "web" middleware group,
+| which includes session state, CSRF protection, and cookies.
+|
+*/
+
+// Public pages
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/privacy', [HomeController::class, 'privacy'])->name('privacy');
 Route::get('/terms', [HomeController::class, 'terms'])->name('terms');
@@ -45,56 +56,59 @@ Route::get('/download/android', function (AppUploadService $appUploadService) {
     }
 })->name('download.android');
 
-Route::get('/install/android', function () {
-    return view('install.android');
-})->name('install.android');
+Route::view('/install/android', 'install.android')->name('install.android');
+Route::view('/install/ios', 'install.ios')->name('install.ios');
 
-Route::get('/install/ios', function () {
-    return view('install.ios');
-})->name('install.ios');
+/*
+|--------------------------------------------------------------------------
+| Admin Authentication Routes
+|--------------------------------------------------------------------------
+*/
+Route::middleware('web')->group(function () {
+    Route::get('/admin/login', function () {
+        if (Auth::check() && Auth::user()->getRoleId() === 1) {
+            return redirect()->intended('/admin/apps');
+        }
+        return view('admin.login');
+    })->name('admin.login');
 
-// Admin Authentication Routes
-Route::get('/admin/login', function () {
-    if (Auth::check() && Auth::user()->getRoleId() === 1) {
-        return redirect()->intended('/admin/apps');
-    }
-    return view('admin.login');
-})->name('admin.login');
+    Route::post('/admin/login', function (Request $request) {
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-Route::post('/admin/login', function (Request $request) {
-    $credentials = $request->validate([
-        'email' => 'required|email',
-        'password' => 'required',
-    ]);
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
 
-    if (Auth::attempt($credentials)) {
-        $user = Auth::user();
+            if ($user->getRoleId() !== 1) {
+                Auth::logout();
+                return back()->withErrors(['email' => 'Access denied. Admin privileges required.']);
+            }
 
-        if ($user->getRoleId() !== 1) {
-            Auth::logout();
-            return back()->withErrors(['email' => 'Access denied. Admin privileges required.']);
+            $request->session()->regenerate();
+            return redirect()->intended('/admin/apps');
         }
 
-        $request->session()->regenerate();
-        return redirect()->intended('/admin/apps');
-    }
+        return back()->withErrors([
+            'email' => 'The provided credentials do not match our records.',
+        ]);
+    })->name('admin.login.post');
 
-    return back()->withErrors([
-        'email' => 'The provided credentials do not match our records.',
-    ]);
-})->name('admin.login.post');
+    Route::post('/admin/logout', function (Request $request) {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect()->route('home');
+    })->name('admin.logout');
+});
 
-Route::post('/admin/logout', function (Request $request) {
-    Auth::logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-    return redirect()->route('home');
-})->name('admin.logout');
-
-// Admin Routes (Protected by auth and admin role)
-Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
-
-    // Main app management dashboard
+/*
+|--------------------------------------------------------------------------
+| Admin Protected Routes
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['web', 'auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/apps', [AppUploadController::class, 'index'])->name('admin.apps');
 
     // Upload endpoints
@@ -126,16 +140,36 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('/statistics', [AppUploadController::class, 'getStatistics'])->name('admin.statistics');
     Route::get('/history/{platform}', [AppUploadController::class, 'getUploadHistory'])->name('admin.history');
     Route::post('/cleanup', [AppUploadController::class, 'cleanupOldUploads'])->name('admin.cleanup');
+
+    // Debug route
+    Route::get('/debug/s3', function () {
+        return response()->json([
+            's3_config' => [
+                'disk' => config('filesystems.default'),
+                'bucket' => config('filesystems.disks.s3.bucket'),
+                'region' => config('filesystems.disks.s3.region'),
+                'url' => config('filesystems.disks.s3.url'),
+            ],
+            's3_test' => [
+                'can_connect' => \Storage::disk('s3')->exists('test') || true,
+            ],
+            'app_statistics' => app(AppUploadService::class)->getStatistics(),
+        ]);
+    })->name('admin.debug.s3');
 });
 
-// API endpoint for mobile app downloads (returns signed URLs)
+/*
+|--------------------------------------------------------------------------
+| API Endpoints
+|--------------------------------------------------------------------------
+*/
 Route::get('/api/download/{platform}', function (string $platform, AppUploadService $appUploadService) {
     if (!in_array($platform, ['android', 'ios'])) {
         return response()->json(['error' => 'Invalid platform'], 400);
     }
 
     try {
-        $downloadUrl = $appUploadService->getActiveDownloadUrl($platform, 15); // 15 min expiry for API
+        $downloadUrl = $appUploadService->getActiveDownloadUrl($platform, 15);
 
         if (!$downloadUrl) {
             return response()->json([
@@ -150,7 +184,6 @@ Route::get('/api/download/{platform}', function (string $platform, AppUploadServ
             'expires_in_minutes' => 15,
             'available' => true
         ]);
-
     } catch (\Exception $e) {
         \Log::error('API download failed', [
             'platform' => $platform,
@@ -164,30 +197,13 @@ Route::get('/api/download/{platform}', function (string $platform, AppUploadServ
     }
 })->name('api.download');
 
-// Debug routes (remove in production)
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/debug/s3', function () {
-        return response()->json([
-            's3_config' => [
-                'disk' => config('filesystems.default'),
-                'bucket' => config('filesystems.disks.s3.bucket'),
-                'region' => config('filesystems.disks.s3.region'),
-                'url' => config('filesystems.disks.s3.url'),
-            ],
-            's3_test' => [
-                'can_connect' => \Storage::disk('s3')->exists('test') || true, // Basic check
-            ],
-            'app_statistics' => app(AppUploadService::class)->getStatistics(),
-        ]);
-    })->name('admin.debug.s3');
-});
+/*
+|--------------------------------------------------------------------------
+| Legacy & Debug
+|--------------------------------------------------------------------------
+*/
+Route::get('/upload', fn() => redirect()->route('admin.apps'))->name('simple.upload');
 
-// Legacy simple upload redirect (for backward compatibility)
-Route::get('/upload', function () {
-    return redirect()->route('admin.apps');
-})->name('simple.upload');
-
-// Test route to verify Laravel is working
 Route::get('/test-laravel-working', function () {
     return response()->json([
         'status' => 'success',
