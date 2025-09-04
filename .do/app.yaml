@@ -12,26 +12,26 @@ services:
     routes:
       - path: /
     health_check:
-      http_path: /health
+      http_path: /ping  # Use simple ping endpoint instead of /health
     envs:
       - key: APP_NAME
         value: "Family Connect"
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: "false"
+        value: "true"
       - key: APP_URL
-        value: "https://family-connect.ondigitalocean.app"
+        value: "https://family-connect-9eh59.ondigitalocean.app"
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_STDERR_FORMATTER
         value: Monolog\Formatter\JsonFormatter
       - key: SESSION_DRIVER
-        value: database
+        value: file  # Use file instead of database
       - key: CACHE_DRIVER
-        value: database
+        value: file   # Use file instead of database
       - key: QUEUE_CONNECTION
-        value: database
+        value: sync   # Use sync instead of database
       - key: BROADCAST_DRIVER
         value: log
       - key: FILESYSTEM_DISK
@@ -62,11 +62,13 @@ services:
         value: "50MB"
       - key: IOS_IPA_SIZE
         value: "60MB"
-      # Secrets (will be added separately)
+      # Database Configuration (SQLite for testing)
+      - key: DB_CONNECTION
+        value: "sqlite"
+      - key: DB_DATABASE
+        value: "/tmp/database.sqlite"
+      # Secrets
       - key: APP_KEY
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-      - key: DATABASE_URL
         scope: RUN_AND_BUILD_TIME
         type: SECRET
       - key: AWS_ACCESS_KEY_ID
@@ -75,18 +77,3 @@ services:
       - key: AWS_SECRET_ACCESS_KEY
         scope: RUN_AND_BUILD_TIME
         type: SECRET
-
-databases:
-  - name: family-connect-db
-    engine: PG
-    version: "13"
-
-jobs:
-  - name: migrate
-    dockerfile_path: Dockerfile.prod
-    source_dir: /
-    github:
-      repo: rendijsb/family-connect-backend
-      branch: main
-    run_command: php artisan migrate --force && php artisan db:seed --force
-    kind: PRE_DEPLOY
