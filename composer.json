@@ -12,6 +12,7 @@
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.29",
         "spatie/laravel-data": "^4.17",
+        "laravel/telescope": "^5.11",
         "ext-pdo": "*",
         "ext-pgsql": "*",
         "ext-curl": "*",
@@ -24,7 +25,6 @@
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.41",
-        "laravel/telescope": "^5.11",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
         "phpunit/phpunit": "^11.5.3"
