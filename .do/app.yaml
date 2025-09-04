@@ -8,7 +8,7 @@ services:
       branch: main
     instance_count: 1
     instance_size_slug: basic-xxs
-    http_port: 80
+    http_port: 8080
     routes:
       - path: /
     health_check:
@@ -21,7 +21,7 @@ services:
       - key: APP_DEBUG
         value: "false"
       - key: APP_URL
-        value: "https://family-connect-9eh59.ondigitalocean.app"
+        value: "https://family-connect.ondigitalocean.app"
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_STDERR_FORMATTER
