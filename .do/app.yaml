@@ -1,20 +1,18 @@
 name: family-connect-backend
 services:
   - name: web
+    dockerfile_path: Dockerfile.prod
     source_dir: /
     github:
       repo: rendijsb/family-connect-backend
       branch: main
-    run_command: heroku-php-apache2 public/
-    environment_slug: php
     instance_count: 1
     instance_size_slug: basic-xxs
-    http_port: 8080
+    http_port: 80
     routes:
       - path: /
     health_check:
       http_path: /health
-    build_command: composer install --no-dev --optimize-autoloader
     envs:
       - key: APP_NAME
         value: "Family Connect"
@@ -85,10 +83,10 @@ databases:
 
 jobs:
   - name: migrate
+    dockerfile_path: Dockerfile.prod
     source_dir: /
     github:
       repo: rendijsb/family-connect-backend
       branch: main
-    environment_slug: php
     run_command: php artisan migrate --force && php artisan db:seed --force
     kind: PRE_DEPLOY
