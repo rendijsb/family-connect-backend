@@ -8,12 +8,6 @@ return [
     |--------------------------------------------------------------------------
     | Default Database Connection Name
     |--------------------------------------------------------------------------
-    |
-    | Here you may specify which of the database connections below you wish
-    | to use as your default connection for database operations. This is
-    | the connection which will be utilized unless another connection
-    | is explicitly specified when you execute a query / statement.
-    |
     */
 
     'default' => env('DB_CONNECTION', 'pgsql'),
@@ -22,11 +16,6 @@ return [
     |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
-    |
-    | Below are all of the database connections defined for your application.
-    | An example configuration is provided for each database system which
-    | is supported by Laravel. You're free to add / remove connections.
-    |
     */
 
     'connections' => [
@@ -85,11 +74,46 @@ return [
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
-            'host' => env('DB_HOST', parse_url(env('DATABASE_URL', ''), PHP_URL_HOST)),
-            'port' => env('DB_PORT', parse_url(env('DATABASE_URL', ''), PHP_URL_PORT) ?: '5432'),
-            'database' => env('DB_DATABASE', ltrim(parse_url(env('DATABASE_URL', ''), PHP_URL_PATH) ?: '', '/')),
-            'username' => env('DB_USERNAME', parse_url(env('DATABASE_URL', ''), PHP_URL_USER)),
-            'password' => env('DB_PASSWORD', parse_url(env('DATABASE_URL', ''), PHP_URL_PASS)),
+            'host' => env('DB_HOST', function() {
+                $url = env('DATABASE_URL');
+                if ($url) {
+                    $parsed = parse_url($url);
+                    return $parsed['host'] ?? 'localhost';
+                }
+                return 'localhost';
+            }),
+            'port' => env('DB_PORT', function() {
+                $url = env('DATABASE_URL');
+                if ($url) {
+                    $parsed = parse_url($url);
+                    return $parsed['port'] ?? 5432;
+                }
+                return 5432;
+            }),
+            'database' => env('DB_DATABASE', function() {
+                $url = env('DATABASE_URL');
+                if ($url) {
+                    $parsed = parse_url($url);
+                    return ltrim($parsed['path'] ?? '', '/');
+                }
+                return 'laravel';
+            }),
+            'username' => env('DB_USERNAME', function() {
+                $url = env('DATABASE_URL');
+                if ($url) {
+                    $parsed = parse_url($url);
+                    return $parsed['user'] ?? 'postgres';
+                }
+                return 'postgres';
+            }),
+            'password' => env('DB_PASSWORD', function() {
+                $url = env('DATABASE_URL');
+                if ($url) {
+                    $parsed = parse_url($url);
+                    return $parsed['pass'] ?? '';
+                }
+                return '';
+            }),
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => env('DB_PREFIX', ''),
             'prefix_indexes' => true,
@@ -99,6 +123,7 @@ return [
                 PDO::ATTR_TIMEOUT => 30,
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_PERSISTENT => false,
             ]) : [],
         ],
 
@@ -113,8 +138,6 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
-            // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
     ],
@@ -123,11 +146,6 @@ return [
     |--------------------------------------------------------------------------
     | Migration Repository Table
     |--------------------------------------------------------------------------
-    |
-    | This table keeps track of all the migrations that have already run for
-    | your application. Using this information, we can determine which of
-    | the migrations on disk haven't actually been run on the database.
-    |
     */
 
     'migrations' => [
@@ -139,11 +157,6 @@ return [
     |--------------------------------------------------------------------------
     | Redis Databases
     |--------------------------------------------------------------------------
-    |
-    | Redis is an open source, fast, and advanced key-value store that also
-    | provides a richer body of commands than a typical key-value system
-    | such as Memcached. You may define your connection settings here.
-    |
     */
 
     'redis' => [

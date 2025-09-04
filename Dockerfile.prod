@@ -18,11 +18,13 @@ RUN apt-get update && apt-get install -y \
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring exif pcntl bcmath gd
 
-# Configure PHP for large uploads
-RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "upload_max_filesize = 400M" >> /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "post_max_size = 450M" >> /usr/local/etc/php/conf.d/uploads.ini && \
-    echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/uploads.ini
+# Configure PHP for large uploads and better performance
+RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/app.ini && \
+    echo "upload_max_filesize = 400M" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "post_max_size = 450M" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "max_input_time = 300" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "output_buffering = 4096" >> /usr/local/etc/php/conf.d/app.ini
 
 # Configure Apache to listen on port 8080
 RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf
@@ -34,11 +36,11 @@ RUN a2enmod rewrite headers
 # Get Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy composer files
+# Copy composer files first for better caching
 COPY composer.json composer.lock ./
 
-# Install dependencies with more memory
-RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-scripts --prefer-dist
+# Install dependencies
+RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-scripts --prefer-dist --no-plugins
 
 # Copy application code
 COPY . .
@@ -46,16 +48,44 @@ COPY . .
 # Complete composer setup
 RUN COMPOSER_MEMORY_LIMIT=-1 composer dump-autoload --optimize
 
-# Configure Apache DocumentRoot
+# Configure Apache DocumentRoot to Laravel public directory
 RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
-# Set permissions
+# Add Apache virtual host configuration for Laravel
+RUN echo '<Directory "/var/www/html/public">' >> /etc/apache2/sites-available/000-default.conf && \
+    echo '    AllowOverride All' >> /etc/apache2/sites-available/000-default.conf && \
+    echo '    Require all granted' >> /etc/apache2/sites-available/000-default.conf && \
+    echo '</Directory>' >> /etc/apache2/sites-available/000-default.conf
+
+# Create required directories with proper permissions
+RUN mkdir -p /var/www/html/storage/logs && \
+    mkdir -p /var/www/html/storage/framework/cache/data && \
+    mkdir -p /var/www/html/storage/framework/sessions && \
+    mkdir -p /var/www/html/storage/framework/views && \
+    mkdir -p /var/www/html/bootstrap/cache
+
+# Set proper permissions
 RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
     chmod -R 775 /var/www/html/storage && \
     chmod -R 775 /var/www/html/bootstrap/cache
 
-# Expose port 8080 (not 80)
+# Make startup script executable
+RUN chmod +x /var/www/html/startup.sh
+
+# Set environment variable for port
+ENV PORT=8080
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+
+# Expose port 8080
 EXPOSE 8080
 
-CMD ["apache2-foreground"]
+# Create a custom Apache start script
+RUN echo '#!/bin/bash\n\
+echo "Starting Apache on port $PORT"\n\
+echo "Document root: $APACHE_DOCUMENT_ROOT"\n\
+cd /var/www/html\n\
+exec apache2-foreground' > /usr/local/bin/start-apache && \
+chmod +x /usr/local/bin/start-apache
+
+CMD ["start-apache"]
