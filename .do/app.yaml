@@ -14,6 +14,7 @@ services:
       - path: /
     health_check:
       http_path: /health
+    build_command: composer install --no-dev --optimize-autoloader
     envs:
       - key: APP_NAME
         value: "Family Connect"
@@ -22,7 +23,7 @@ services:
       - key: APP_DEBUG
         value: "false"
       - key: APP_URL
-        value: "https://family-connect-backend.ondigitalocean.app"
+        value: "https://family-connect.ondigitalocean.app"
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_STDERR_FORMATTER
