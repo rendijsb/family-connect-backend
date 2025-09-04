@@ -12,6 +12,10 @@ Route::get('/privacy', [HomeController::class, 'privacy'])->name('privacy');
 Route::get('/terms', [HomeController::class, 'terms'])->name('terms');
 Route::get('/support', [HomeController::class, 'support'])->name('support');
 
+Route::get('/health', function() {
+    return response()->json(['status' => 'ok']);
+});
+
 Route::get('/health', function () {
     return response()->json([
         'status' => 'ok',
