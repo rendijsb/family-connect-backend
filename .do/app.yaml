@@ -13,7 +13,7 @@ services:
     routes:
       - path: /
     health_check:
-      http_path: /
+      http_path: /health
       initial_delay_seconds: 30
       period_seconds: 10
       timeout_seconds: 5
@@ -69,17 +69,9 @@ services:
       - key: IOS_IPA_SIZE
         value: "60MB"
       - key: DB_CONNECTION
-        value: "pgsql"
-      - key: DB_HOST
-        value: "${family-connect-db.HOSTNAME}"
-      - key: DB_PORT
-        value: "${family-connect-db.PORT}"
-      - key: DB_DATABASE
-        value: "${family-connect-db.DATABASE}"
-      - key: DB_USERNAME
-        value: "${family-connect-db.USERNAME}"
-      - key: DB_PASSWORD
-        value: "${family-connect-db.PASSWORD}"
+        value: pgsql
+      - key: DATABASE_URL
+        value: "${family-connect-db.DATABASE_URL}"
       # Secrets
       - key: APP_KEY
         scope: RUN_AND_BUILD_TIME
