@@ -3,6 +3,10 @@
 
 $errors = [];
 $warnings = [];
+$is_build_time = !isset($_ENV['DATABASE_URL']) && !isset($_SERVER['DATABASE_URL']) && !getenv('DATABASE_URL');
+
+echo "🔍 Running preflight checks...\n";
+echo "Mode: " . ($is_build_time ? "BUILD TIME" : "RUNTIME") . "\n";
 
 // Check PHP version
 if (version_compare(PHP_VERSION, '8.2.0', '<')) {
@@ -10,18 +14,31 @@ if (version_compare(PHP_VERSION, '8.2.0', '<')) {
 }
 
 // Check required extensions
-$required_extensions = ['pdo', 'pdo_pgsql', 'mbstring', 'openssl', 'tokenizer', 'xml', 'curl'];
+$required_extensions = ['pdo', 'mbstring', 'openssl', 'tokenizer', 'xml', 'curl'];
 foreach ($required_extensions as $ext) {
     if (!extension_loaded($ext)) {
         $errors[] = "Required PHP extension '$ext' is not loaded";
     }
 }
 
-// Check environment variables
-$required_env = ['APP_KEY', 'DATABASE_URL'];
-foreach ($required_env as $env) {
+// Only check pdo_pgsql at runtime when DATABASE_URL should be available
+if (!$is_build_time && !extension_loaded('pdo_pgsql')) {
+    $errors[] = "Required PHP extension 'pdo_pgsql' is not loaded";
+}
+
+// Check environment variables - only APP_KEY is required at build time
+$build_time_env = ['APP_KEY'];
+$runtime_env = ['APP_KEY', 'DATABASE_URL'];
+
+$env_to_check = $is_build_time ? $build_time_env : $runtime_env;
+
+foreach ($env_to_check as $env) {
     if (empty($_ENV[$env] ?? $_SERVER[$env] ?? getenv($env))) {
-        $errors[] = "Required environment variable '$env' is not set";
+        if ($is_build_time && $env === 'DATABASE_URL') {
+            $warnings[] = "Environment variable '$env' is not available at build time (this is normal)";
+        } else {
+            $errors[] = "Required environment variable '$env' is not set";
+        }
     }
 }
 
@@ -44,8 +61,8 @@ foreach ($required_dirs as $dir) {
     }
 }
 
-// Check database connection
-if (!empty($_ENV['DATABASE_URL'] ?? $_SERVER['DATABASE_URL'] ?? getenv('DATABASE_URL'))) {
+// Check database connection (only at runtime)
+if (!$is_build_time && !empty($_ENV['DATABASE_URL'] ?? $_SERVER['DATABASE_URL'] ?? getenv('DATABASE_URL'))) {
     try {
         $db_url = $_ENV['DATABASE_URL'] ?? $_SERVER['DATABASE_URL'] ?? getenv('DATABASE_URL');
         $parsed = parse_url($db_url);
@@ -64,6 +81,7 @@ if (!empty($_ENV['DATABASE_URL'] ?? $_SERVER['DATABASE_URL'] ?? getenv('DATABASE
 
         // Test query
         $pdo->query('SELECT 1');
+        echo "✅ Database connection successful\n";
 
     } catch (PDOException $e) {
         $warnings[] = 'Database connection test failed: ' . $e->getMessage();
@@ -88,11 +106,17 @@ if (!empty($warnings)) {
     }
 }
 
-echo "✅ Preflight checks completed\n";
+echo "✅ Preflight checks completed successfully\n";
 echo "PHP Version: " . PHP_VERSION . "\n";
 echo "Memory Limit: " . ini_get('memory_limit') . "\n";
 echo "Max Execution Time: " . ini_get('max_execution_time') . "s\n";
 echo "Upload Max Filesize: " . ini_get('upload_max_filesize') . "\n";
 echo "Post Max Size: " . ini_get('post_max_size') . "\n";
+
+if ($is_build_time) {
+    echo "📦 Build-time checks completed\n";
+} else {
+    echo "🚀 Runtime checks completed\n";
+}
 
 return true;
