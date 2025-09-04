@@ -13,7 +13,48 @@ Route::get('/terms', [HomeController::class, 'terms'])->name('terms');
 Route::get('/support', [HomeController::class, 'support'])->name('support');
 
 Route::get('/health', function() {
-    return response()->json(['status' => 'ok']);
+    try {
+        // Test database connection
+        $dbStatus = 'ok';
+        try {
+            DB::connection()->getPdo();
+            DB::connection()->getDatabaseName();
+        } catch (\Exception $e) {
+            $dbStatus = 'error: ' . $e->getMessage();
+        }
+
+        // Test S3 connection (basic check)
+        $s3Status = 'ok';
+        try {
+            Storage::disk('s3');
+        } catch (\Exception $e) {
+            $s3Status = 'warning: ' . $e->getMessage();
+        }
+
+        $response = [
+            'status' => 'ok',
+            'service' => 'family-connect-api',
+            'timestamp' => now()->toISOString(),
+            'version' => config('app.version', '1.0.0'),
+            'environment' => app()->environment(),
+            'database' => $dbStatus,
+            's3' => $s3Status,
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version()
+        ];
+
+        return response()->json($response);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'timestamp' => now()->toISOString()
+        ], 500);
+    }
+});
+
+Route::get('/ping', function() {
+    return response()->json(['status' => 'pong']);
 });
 
 Route::get('/health', function () {

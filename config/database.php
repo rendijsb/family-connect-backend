@@ -85,11 +85,21 @@ return [
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DATABASE_URL'),
-            'charset' => 'utf8',
-            'prefix' => '',
+            'host' => env('DB_HOST', parse_url(env('DATABASE_URL', ''), PHP_URL_HOST)),
+            'port' => env('DB_PORT', parse_url(env('DATABASE_URL', ''), PHP_URL_PORT) ?: '5432'),
+            'database' => env('DB_DATABASE', ltrim(parse_url(env('DATABASE_URL', ''), PHP_URL_PATH) ?: '', '/')),
+            'username' => env('DB_USERNAME', parse_url(env('DATABASE_URL', ''), PHP_URL_USER)),
+            'password' => env('DB_PASSWORD', parse_url(env('DATABASE_URL', ''), PHP_URL_PASS)),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => env('DB_PREFIX', ''),
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'sslmode' => env('DB_SSLMODE', 'require'),
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                PDO::ATTR_TIMEOUT => 30,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ]) : [],
         ],
 
         'sqlsrv' => [
@@ -142,7 +152,7 @@ return [
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
-            'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
+            'prefix' => env('REDIS_PREFIX', Str::slug((string)env('APP_NAME', 'laravel')) . '-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
         ],
 

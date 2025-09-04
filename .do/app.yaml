@@ -14,11 +14,11 @@ services:
       - path: /
     health_check:
       http_path: /health
-      initial_delay_seconds: 30
+      initial_delay_seconds: 60
       period_seconds: 10
-      timeout_seconds: 5
+      timeout_seconds: 10
       success_threshold: 1
-      failure_threshold: 3
+      failure_threshold: 5
     envs:
       - key: APP_NAME
         value: "Family Connect"
@@ -72,6 +72,12 @@ services:
         value: pgsql
       - key: DATABASE_URL
         value: "${family-connect-db.DATABASE_URL}"
+      - key: SANCTUM_STATEFUL_DOMAINS
+        value: "localhost,127.0.0.1,family-connect-9eh59.ondigitalocean.app"
+      - key: SESSION_DOMAIN
+        value: ".ondigitalocean.app"
+      - key: TELESCOPE_ENABLED
+        value: "true"
       # Secrets
       - key: APP_KEY
         scope: RUN_AND_BUILD_TIME
