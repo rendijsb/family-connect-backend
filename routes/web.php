@@ -12,89 +12,6 @@ Route::get('/privacy', [HomeController::class, 'privacy'])->name('privacy');
 Route::get('/terms', [HomeController::class, 'terms'])->name('terms');
 Route::get('/support', [HomeController::class, 'support'])->name('support');
 
-Route::get('/health', function() {
-    try {
-        $response = [
-            'status' => 'ok',
-            'service' => 'family-connect-api',
-            'timestamp' => now()->toISOString(),
-            'version' => config('app.version', '1.0.0'),
-            'environment' => app()->environment(),
-            'php_version' => PHP_VERSION,
-            'laravel_version' => app()->version()
-        ];
-
-        // Test database connection (non-blocking)
-        try {
-            $start = microtime(true);
-            DB::connection()->getPdo();
-            $dbName = DB::connection()->getDatabaseName();
-            $response['database'] = [
-                'status' => 'connected',
-                'name' => $dbName,
-                'response_time_ms' => round((microtime(true) - $start) * 1000, 2)
-            ];
-        } catch (\Exception $e) {
-            $response['database'] = [
-                'status' => 'error',
-                'error' => $e->getMessage()
-            ];
-            // Don't fail the health check for DB issues during startup
-            if (strpos($e->getMessage(), 'Connection refused') === false) {
-                $response['status'] = 'degraded';
-            }
-        }
-
-        // Test basic Laravel functionality
-        try {
-            config('app.name');
-            $response['laravel'] = ['status' => 'ok'];
-        } catch (\Exception $e) {
-            $response['laravel'] = ['status' => 'error', 'error' => $e->getMessage()];
-            $response['status'] = 'error';
-        }
-
-        // Test S3 configuration (basic check - don't actually connect)
-        try {
-            $s3Config = [
-                'bucket' => config('filesystems.disks.s3.bucket'),
-                'region' => config('filesystems.disks.s3.region'),
-                'configured' => !empty(config('filesystems.disks.s3.bucket'))
-            ];
-            $response['s3'] = $s3Config;
-        } catch (\Exception $e) {
-            $response['s3'] = ['status' => 'config_error', 'error' => $e->getMessage()];
-        }
-
-        $httpStatus = ($response['status'] === 'ok') ? 200 :
-            (($response['status'] === 'degraded') ? 200 : 503);
-
-        return response()->json($response, $httpStatus);
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Health check failed: ' . $e->getMessage(),
-            'timestamp' => now()->toISOString()
-        ], 500);
-    }
-});
-
-Route::get('/ping', function() {
-    return response()->json([
-        'status' => 'pong',
-        'timestamp' => now()->toISOString()
-    ]);
-});
-
-// Simple route to test basic Laravel routing
-Route::get('/test', function() {
-    return response()->json([
-        'message' => 'Laravel is working!',
-        'timestamp' => now()->toISOString(),
-        'environment' => app()->environment()
-    ]);
-});
-
 // S3-based download routes (public access with signed URLs)
 Route::get('/download/ios', function (AppUploadService $appUploadService) {
     try {
@@ -141,7 +58,6 @@ Route::get('/admin/login', function () {
     if (Auth::check() && Auth::user()->getRoleId() === 1) {
         return redirect()->intended('/admin/apps');
     }
-
     return view('admin.login');
 })->name('admin.login');
 
@@ -154,7 +70,7 @@ Route::post('/admin/login', function (Request $request) {
     if (Auth::attempt($credentials)) {
         $user = Auth::user();
 
-        if ($user->getRoleId() !== 1) { // 1 = admin role
+        if ($user->getRoleId() !== 1) {
             Auth::logout();
             return back()->withErrors(['email' => 'Access denied. Admin privileges required.']);
         }
