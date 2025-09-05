@@ -60,11 +60,7 @@ class FamilyController
 
     public function updateFamily(UpdateFamilyRequest $request): FamilyResource
     {
-        $familyMember = $request->get('_family_member');
-
-        if (!$familyMember || !$this->canManageFamily($familyMember)) {
-            abort(403, 'You do not have permission to update this family.');
-        }
+        $this->ensureCanManageFamily($request);
 
         return $request->responseResource(
             $this->familyRepository->updateFamily($request->dto())
@@ -73,29 +69,16 @@ class FamilyController
 
     public function deleteFamily(DeleteFamilyRequest $request): JsonResponse
     {
-        $family = $request->get('_family');
-        $familyMember = $request->get('_family_member');
-
-        if (!$family || !$familyMember || !$this->isOwner($family, $familyMember)) {
-            abort(403, 'Only the family owner can delete the family.');
-        }
-
+        $this->ensureIsOwner($request);
         $this->familyRepository->deleteFamily($request->getFamilySlug());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Family deleted successfully.',
-        ], 200);
+        return $this->successResponse('Family deleted successfully.');
     }
 
     public function leaveFamily(LeaveFamilyRequest $request): JsonResponse
     {
         $this->familyRepository->leaveFamily($request->getFamilySlug());
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Family left.',
-        ], 200);
+        return $this->successResponse('Family left.');
     }
 
     public function joinFamilyByCode(JoinFamilyByCodeRequest $request): FamilyResource
@@ -107,25 +90,17 @@ class FamilyController
 
     public function generateJoinCode(GenerateJoinCodeRequest $request): JsonResponse
     {
-        $family = $request->get('_family');
-        $familyMember = $request->get('_family_member');
-
-        if (!$family || !$familyMember || !$this->canManageFamily($familyMember)) {
-            abort(403, 'You do not have permission to generate join codes for this family.');
-        }
+        $this->ensureCanManageFamily($request);
 
         try {
-            $updatedFamily = $this->familyRepository->generateJoinCodeAndRefreshFamily($request->getFamilySlug());
-
+            $family = $this->familyRepository->generateJoinCodeAndRefreshFamily($request->getFamilySlug());
+            
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'joinCode' => $updatedFamily->getJoinCode(),
-                    'family' => new FamilyResource($updatedFamily)
-                ],
+                'data' => ['joinCode' => $family->getJoinCode()],
                 'message' => 'Join code generated successfully.'
-            ], 200);
-        } catch (\Throwable $e) {
+            ]);
+        } catch (\Throwable) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to generate join code. Please try again.'
@@ -135,20 +110,11 @@ class FamilyController
 
     public function inviteMember(InviteMemberRequest $request): JsonResponse
     {
-        $family = $request->get('_family');
-        $familyMember = $request->get('_family_member');
-
-        if (!$family || !$familyMember || !$this->canInviteMembers($familyMember)) {
-            abort(403, 'You do not have permission to invite members to this family.');
-        }
+        $this->ensureCanManageFamily($request);
 
         try {
             $this->familyRepository->inviteMember($request->dto());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Invitation sent successfully.'
-            ], 200);
+            return $this->successResponse('Invitation sent successfully.');
         } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'success' => false,
@@ -157,20 +123,32 @@ class FamilyController
         }
     }
 
-    private function canManageFamily(FamilyMember $member): bool
+    private function ensureCanManageFamily($request): void
     {
-        return in_array($member->getRole(), [
-            FamilyRoleEnum::OWNER,
-            FamilyRoleEnum::MODERATOR,
-        ]);
+        $familyMember = $request->get('_family_member');
+        if (!$familyMember || !$this->canManageFamily($familyMember)) {
+            abort(403, 'You do not have permission to manage this family.');
+        }
     }
 
-    private function canInviteMembers(FamilyMember $member): bool
+    private function ensureIsOwner($request): void
     {
-        return in_array($member->getRole(), [
-            FamilyRoleEnum::OWNER,
-            FamilyRoleEnum::MODERATOR,
-        ]);
+        $family = $request->get('_family');
+        $familyMember = $request->get('_family_member');
+
+        if (!$family || !$familyMember || !$this->isOwner($family, $familyMember)) {
+            abort(403, 'Only the family owner can perform this action.');
+        }
+    }
+
+    private function successResponse(string $message): JsonResponse
+    {
+        return response()->json(['success' => true, 'message' => $message]);
+    }
+
+    private function canManageFamily(FamilyMember $member): bool
+    {
+        return in_array($member->getRole(), [FamilyRoleEnum::OWNER, FamilyRoleEnum::MODERATOR]);
     }
 
     private function isOwner(Family $family, FamilyMember $member): bool
