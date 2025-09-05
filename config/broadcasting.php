@@ -39,12 +39,14 @@ return [
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                'host' => env('PUSHER_HOST', '127.0.0.1'), // Use localhost for server-to-server
+                'host' => env('PUSHER_HOST', '127.0.0.1'),
                 'port' => env('PUSHER_PORT', 8080),
                 'scheme' => env('PUSHER_SCHEME', 'http'),
-                'useTLS' => false, // No TLS for internal communication
+                'useTLS' => false,
+                'cluster' => '',
             ],
             'client_options' => [
+                // Guzzle client options
             ],
         ],
 
