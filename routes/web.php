@@ -215,48 +215,25 @@ Route::get('/test-laravel-working', function () {
     ]);
 });
 
-Route::get('/test-reverb', function () {
+Route::get('/test-pusher', function () {
     try {
-        broadcast(new \Illuminate\Notifications\Messages\BroadcastMessage([
-            'test' => 'WebSocket test',
-            'timestamp' => now(),
-        ]));
+        broadcast(new \App\Events\Chat\MessageSent(
+            \App\Models\Chat\ChatMessage::first()
+        ));
 
         return response()->json([
-            'status' => 'Reverb broadcast sent',
+            'status' => 'success',
+            'message' => 'Broadcast sent via Pusher',
             'config' => [
                 'driver' => config('broadcasting.default'),
-                'reverb_host' => config('reverb.servers.reverb.hostname'),
-                'reverb_port' => config('reverb.servers.reverb.port'),
+                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+                'key' => config('broadcasting.connections.pusher.key'),
             ]
         ]);
     } catch (\Exception $e) {
         return response()->json([
-            'status' => 'Reverb failed',
-            'error' => $e->getMessage(),
+            'status' => 'error',
+            'message' => $e->getMessage(),
         ], 500);
     }
-});
-
-// In routes/web.php
-Route::get('/debug-reverb', function () {
-    // Check if process is running
-    $processes = shell_exec('ps aux | grep reverb');
-
-    return response()->json([
-        'reverb_processes' => $processes,
-        'config' => [
-            'driver' => config('broadcasting.default'),
-            'reverb_server_host' => config('reverb.servers.reverb.host'),
-            'reverb_server_port' => config('reverb.servers.reverb.port'),
-            'reverb_client_host' => config('reverb.apps.apps.0.options.host'),
-            'reverb_client_port' => config('reverb.apps.apps.0.options.port'),
-        ],
-        'environment' => [
-            'REVERB_SERVER_HOST' => env('REVERB_SERVER_HOST'),
-            'REVERB_SERVER_PORT' => env('REVERB_SERVER_PORT'),
-            'REVERB_HOST' => env('REVERB_HOST'),
-            'REVERB_PORT' => env('REVERB_PORT'),
-        ]
-    ]);
 });
