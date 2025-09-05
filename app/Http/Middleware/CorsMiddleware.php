@@ -26,7 +26,8 @@ class CorsMiddleware
             'http://localhost:8100', // Ionic dev server
             'capacitor://localhost', // Capacitor iOS/Android
             'ionic://localhost',
-            'https://family-connect.laravel.cloud/'
+            'https://family-connect.laravel.cloud',
+            'wss://family-connect.laravel.cloud'
         ];
         $allowOriginHeader = in_array($origin, $allowedOrigins, true) ? $origin : $allowedOrigins[0];
 

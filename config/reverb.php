@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     'default' => env('REVERB_SERVER', 'reverb'),
 
     'servers' => [
@@ -9,13 +8,13 @@ return [
             'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
             'port' => env('REVERB_SERVER_PORT', 8080),
             'path' => env('REVERB_SERVER_PATH', ''),
-            'hostname' => env('REVERB_HOST', 'websocket'),
+            'hostname' => env('REVERB_HOST', 'family-connect.laravel.cloud'),
             'options' => [
                 'tls' => [],
             ],
             'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 10000),
             'scaling' => [
-                'enabled' => env('REVERB_SCALING_ENABLED', false),
+                'enabled' => env('REVERB_SCALING_ENABLED', true), // Enable for production
                 'channel' => env('REVERB_SCALING_CHANNEL', 'reverb'),
                 'server' => [
                     'url' => env('REDIS_URL'),
@@ -40,17 +39,22 @@ return [
                 'secret' => env('REVERB_APP_SECRET', 'family-connect-secret'),
                 'app_id' => env('REVERB_APP_ID', 'family-connect'),
                 'options' => [
-                    'host' => env('REVERB_HOST', 'websocket'),
-                    'port' => env('REVERB_PORT', 8080),
-                    'scheme' => env('REVERB_SCHEME', 'http'),
-                    'useTLS' => env('REVERB_SCHEME', 'http') === 'https',
+                    'host' => env('REVERB_HOST', 'family-connect.laravel.cloud'),
+                    'port' => env('REVERB_PORT', 443),
+                    'scheme' => env('REVERB_SCHEME', 'https'),
+                    'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
-                'allowed_origins' => ['*'],
+                'allowed_origins' => [
+                    'https://family-connect.laravel.cloud',
+                    'capacitor://localhost',
+                    'ionic://localhost',
+                    'http://localhost:4200',
+                    'http://localhost:8100',
+                ],
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
                 'max_message_size' => env('REVERB_APP_MAX_MESSAGE_SIZE', 10000),
             ],
         ],
     ],
-
 ];
