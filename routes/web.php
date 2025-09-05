@@ -214,3 +214,26 @@ Route::get('/test-laravel-working', function () {
         'laravel_version' => app()->version()
     ]);
 });
+
+Route::get('/test-reverb', function () {
+    try {
+        broadcast(new \Illuminate\Notifications\Messages\BroadcastMessage([
+            'test' => 'WebSocket test',
+            'timestamp' => now(),
+        ]));
+
+        return response()->json([
+            'status' => 'Reverb broadcast sent',
+            'config' => [
+                'driver' => config('broadcasting.default'),
+                'reverb_host' => config('reverb.servers.reverb.hostname'),
+                'reverb_port' => config('reverb.servers.reverb.port'),
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'Reverb failed',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
