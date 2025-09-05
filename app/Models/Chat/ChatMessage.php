@@ -82,7 +82,7 @@ class ChatMessage extends Model
 
     public function chatRoomRelation(): BelongsTo
     {
-        return $this->belongsTo(ChatRoom::class);
+        return $this->belongsTo(ChatRoom::class, self::CHAT_ROOM_ID);
     }
 
     public function userRelation(): BelongsTo

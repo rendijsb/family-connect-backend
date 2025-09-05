@@ -70,7 +70,8 @@ RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 775 /var/www/html/storage && \
     chmod -R 775 /var/www/html/bootstrap/cache
 
-# Make startup script executable
+# Copy startup script and make executable
+COPY startup.sh /var/www/html/startup.sh
 RUN chmod +x /var/www/html/startup.sh
 
 # Set environment variable for port
@@ -80,12 +81,15 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 # Expose port 8080
 EXPOSE 8080
 
-# Create a custom Apache start script
+# Create a comprehensive start script that runs Laravel setup and Apache
 RUN echo '#!/bin/bash\n\
-echo "Starting Apache on port $PORT"\n\
-echo "Document root: $APACHE_DOCUMENT_ROOT"\n\
+echo "🚀 Starting Laravel Cloud application..."\n\
 cd /var/www/html\n\
-exec apache2-foreground' > /usr/local/bin/start-apache && \
-chmod +x /usr/local/bin/start-apache
+# Run Laravel startup tasks\n\
+./startup.sh\n\
+# Start Apache in foreground\n\
+echo "🌐 Starting Apache web server on port $PORT"\n\
+exec apache2-foreground' > /usr/local/bin/start-app && \
+chmod +x /usr/local/bin/start-app
 
-CMD ["start-apache"]
+CMD ["start-app"]
