@@ -8,9 +8,14 @@ return [
             'host' => env('REVERB_SERVER_HOST', '0.0.0.0'),
             'port' => env('REVERB_SERVER_PORT', 8080),
             'path' => env('REVERB_SERVER_PATH', ''),
+            'key' => env('REVERB_APP_KEY', 'family-connect-key'),
+            'secret' => env('REVERB_APP_SECRET', 'family-connect-secret'),
+            'app_id' => env('REVERB_APP_ID', 'family-connect'),
             'hostname' => env('REVERB_HOST', 'family-connect.laravel.cloud'),
             'options' => [
-                'tls' => [],
+                'host' => env('REVERB_HOST', 'family-connect.laravel.cloud'),
+                'port' => env('REVERB_PORT', 443),
+                'scheme' => env('REVERB_SCHEME', 'https'),
             ],
             'max_request_size' => env('REVERB_MAX_REQUEST_SIZE', 10000),
             'scaling' => [
