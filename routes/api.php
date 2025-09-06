@@ -18,26 +18,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     ]);
 });
 
-// Override Laravel's default broadcasting auth
-Route::post('/broadcasting/auth', function (Request $request) {
-    // Get Pusher config directly
-    $pusherConfig = config('broadcasting.connections.pusher');
-
-    $socketId = $request->socket_id;
-    $channelName = $request->channel_name;
-
-    // Use Pusher config directly
-    $key = $pusherConfig['key'];
-    $secret = $pusherConfig['secret'];
-
-    $stringToSign = $socketId . ':' . $channelName;
-    $signature = hash_hmac('sha256', $stringToSign, $secret);
-
-    return response()->json([
-        'auth' => $key . ':' . $signature
-    ]);
-})->middleware('auth:sanctum');
-
 AuthRoutes::api();
 FamilyRoutes::api();
 FamilyMemberRoutes::api();
