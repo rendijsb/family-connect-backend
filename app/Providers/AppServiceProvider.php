@@ -16,17 +16,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        // Force the broadcasting manager to use correct Pusher config
-        $this->app->bind('pusher', function ($app) {
-            $config = config('broadcasting.connections.pusher');
 
-            return new Pusher(
-                $config['key'],
-                $config['secret'],
-                $config['app_id'],
-                $config['options']
-            );
-        });
     }
 
     /**
@@ -34,7 +24,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Configure route model binding for ChatMessage to always load the chatRoomRelation
         Route::bind('message', function (string $value) {
             return ChatMessage::with(ChatMessage::CHAT_ROOM_RELATION)->findOrFail($value);
         });
