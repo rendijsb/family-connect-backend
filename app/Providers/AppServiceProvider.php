@@ -38,7 +38,6 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('message', function (string $value) {
             return ChatMessage::with(ChatMessage::CHAT_ROOM_RELATION)->findOrFail($value);
         });
-        Broadcast::routes();
         require base_path('routes/channels.php');
     }
 }
