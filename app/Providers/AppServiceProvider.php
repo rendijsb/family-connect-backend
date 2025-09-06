@@ -12,14 +12,16 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Register any application services.
      */
-    public function register(): void
+    public function register()
     {
         $this->app->singleton(\Pusher\Pusher::class, function ($app) {
+            $config = config('broadcasting.connections.pusher');
+
             return new \Pusher\Pusher(
-                config('broadcasting.connections.pusher.key'),
-                config('broadcasting.connections.pusher.secret'),
-                config('broadcasting.connections.pusher.app_id'),
-                config('broadcasting.connections.pusher.options')
+                $config['key'],           // This should be 40fb26d70f1e65939629
+                $config['secret'],        // Your secret
+                $config['app_id'],        // Your app ID
+                $config['options'] ?? []
             );
         });
     }
