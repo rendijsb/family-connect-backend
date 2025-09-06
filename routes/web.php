@@ -237,3 +237,13 @@ Route::get('/test-pusher', function () {
         ], 500);
     }
 });
+
+Route::get('/debug-broadcast-config', function() {
+    return [
+        'broadcast_default' => config('broadcasting.default'),
+        'broadcast_driver' => env('BROADCAST_DRIVER'),
+        'pusher_config' => config('broadcasting.connections.pusher'),
+        'reverb_config' => config('reverb'),
+        'all_broadcast_connections' => config('broadcasting.connections'),
+    ];
+});
