@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\Chat\ChatMessage;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
+use Pusher\Pusher;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,14 +16,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton(\Pusher\Pusher::class, function ($app) {
+        // Force the broadcasting manager to use correct Pusher config
+        $this->app->bind('pusher', function ($app) {
             $config = config('broadcasting.connections.pusher');
 
-            return new \Pusher\Pusher(
-                $config['key'],           // This should be 40fb26d70f1e65939629
-                $config['secret'],        // Your secret
-                $config['app_id'],        // Your app ID
-                $config['options'] ?? []
+            return new Pusher(
+                $config['key'],
+                $config['secret'],
+                $config['app_id'],
+                $config['options']
             );
         });
     }
@@ -35,5 +38,7 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('message', function (string $value) {
             return ChatMessage::with(ChatMessage::CHAT_ROOM_RELATION)->findOrFail($value);
         });
+        Broadcast::routes();
+        require base_path('routes/channels.php');
     }
 }
