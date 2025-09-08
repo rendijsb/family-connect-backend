@@ -215,60 +215,68 @@ Route::get('/test-laravel-working', function () {
     ]);
 });
 
-// Test Pusher configuration with different clusters
+// Test both direct Pusher and Laravel broadcasting
 Route::get('/test-pusher', function () {
-    $clusters = ['us2', 'us3', 'eu', 'ap1', 'ap2', 'ap3', 'ap4'];
     $results = [];
     
-    foreach ($clusters as $cluster) {
-        try {
-            Log::info("Testing Pusher with cluster: {$cluster}");
-            
-            $pusher = new \Pusher\Pusher(
-                config('broadcasting.connections.pusher.key'),
-                config('broadcasting.connections.pusher.secret'),
-                config('broadcasting.connections.pusher.app_id'),
-                [
-                    'cluster' => $cluster,
-                    'useTLS' => true,
-                ]
-            );
-            
-            // Test a simple trigger
-            $result = $pusher->trigger('test-channel', 'test-event', [
-                'message' => "Test message for cluster {$cluster}",
-                'timestamp' => now()->toISOString()
-            ]);
-            
-            Log::info("Pusher trigger successful for cluster {$cluster}", ['result' => $result]);
-            
-            $results[$cluster] = [
-                'success' => true,
-                'message' => 'Working!',
-                'result' => $result
-            ];
-            
-            // If we found a working cluster, break
-            break;
-            
-        } catch (\Exception $e) {
-            Log::error("Pusher test failed for cluster {$cluster}", [
-                'error' => $e->getMessage()
-            ]);
-            
-            $results[$cluster] = [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
-        }
+    // Test 1: Direct Pusher connection (we know this works)
+    try {
+        Log::info("Testing direct Pusher connection");
+        
+        $pusher = new \Pusher\Pusher(
+            config('broadcasting.connections.pusher.key'),
+            config('broadcasting.connections.pusher.secret'),
+            config('broadcasting.connections.pusher.app_id'),
+            [
+                'cluster' => 'eu',
+                'useTLS' => true,
+            ]
+        );
+        
+        $result = $pusher->trigger('test-channel', 'test-event', [
+            'message' => 'Direct Pusher test',
+            'timestamp' => now()->toISOString()
+        ]);
+        
+        $results['direct_pusher'] = [
+            'success' => true,
+            'message' => 'Direct Pusher works!',
+            'result' => $result
+        ];
+        
+    } catch (\Exception $e) {
+        $results['direct_pusher'] = [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+    
+    // Test 2: Laravel broadcast helper
+    try {
+        Log::info("Testing Laravel broadcast helper");
+        
+        $broadcastResult = broadcast(new \App\Events\Chat\UserTyping(
+            new \App\Models\Users\User(['id' => 999, 'name' => 'Test User']),
+            999,
+            true
+        ));
+        
+        $results['laravel_broadcast'] = [
+            'success' => true,
+            'message' => 'Laravel broadcast works!',
+            'result' => 'Broadcast sent successfully'
+        ];
+        
+    } catch (\Exception $e) {
+        $results['laravel_broadcast'] = [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
     }
     
     return response()->json([
-        'message' => 'Pusher cluster test results',
-        'config' => [
-            'app_id' => config('broadcasting.connections.pusher.app_id'),
-            'key' => config('broadcasting.connections.pusher.key'),
-        ],
+        'message' => 'Pusher and Laravel broadcasting test results',
+        'broadcasting_config' => config('broadcasting'),
         'results' => $results
     ]);
 });
