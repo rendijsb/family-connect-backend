@@ -229,7 +229,7 @@ Route::get('/test-pusher', function () {
             config('broadcasting.connections.pusher.secret'),
             config('broadcasting.connections.pusher.app_id'),
             [
-                'cluster' => config('broadcasting.connections.pusher.options.cluster', 'us2'),
+                'cluster' => config('broadcasting.connections.pusher.options.cluster', 'eu'),
                 'useTLS' => true,
             ]
         );
