@@ -6,6 +6,7 @@ use App\Services\Apps\AppUploadService;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 /*
 |--------------------------------------------------------------------------
@@ -255,8 +256,13 @@ Route::get('/test-pusher', function () {
     try {
         Log::info("Testing Laravel broadcast helper");
         
+        // Create a test user with proper attributes
+        $testUser = new \App\Models\Users\User();
+        $testUser->setAttribute('id', 999);
+        $testUser->setAttribute('name', 'Test User');
+        
         $broadcastResult = broadcast(new \App\Events\Chat\UserTyping(
-            new \App\Models\Users\User(['id' => 999, 'name' => 'Test User']),
+            $testUser,
             999,
             true
         ));
