@@ -18,12 +18,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     ]);
 });
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::match(['get', 'post'], '/broadcasting/auth', [BroadcastController::class, 'authenticate']);
-    Route::options('/broadcasting/auth', function () {
-        return response('', 200);
-    });
-});
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 AuthRoutes::api();
 FamilyRoutes::api();
