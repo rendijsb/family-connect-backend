@@ -8,7 +8,7 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'default' => env('BROADCAST_DRIVER', 'pusher'),
+    'default' => env('BROADCAST_CONNECTION', env('BROADCAST_DRIVER', 'pusher')),
 
     /*
     |--------------------------------------------------------------------------

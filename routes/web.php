@@ -216,73 +216,117 @@ Route::get('/test-laravel-working', function () {
     ]);
 });
 
-// Test both direct Pusher and Laravel broadcasting
-Route::get('/test-pusher', function () {
+// Test Ably WebSocket broadcasting
+Route::get('/test-ably', function () {
     $results = [];
     
-    // Test 1: Direct Pusher connection (we know this works)
+    // Test 1: Laravel broadcast helper with Ably
     try {
-        Log::info("Testing direct Pusher connection");
+        Log::info("Testing Laravel broadcast with Ably");
         
-        $pusher = new \Pusher\Pusher(
-            config('broadcasting.connections.pusher.key'),
-            config('broadcasting.connections.pusher.secret'),
-            config('broadcasting.connections.pusher.app_id'),
-            [
-                'cluster' => config('broadcasting.connections.pusher.options.cluster', 'eu'),
-                'useTLS' => true,
-            ]
-        );
+        // Create a simple test event
+        $broadcastResult = broadcast(new class {
+            public $data;
+            
+            public function __construct() {
+                $this->data = [
+                    'message' => 'Ably WebSocket test successful!',
+                    'timestamp' => now()->toISOString(),
+                    'server' => request()->getHost()
+                ];
+            }
+            
+            public function broadcastOn() {
+                return ['test-channel'];
+            }
+            
+            public function broadcastAs() {
+                return 'test-event';
+            }
+        });
         
-        $result = $pusher->trigger('test-channel', 'test-event', [
-            'message' => 'Direct Pusher test',
-            'timestamp' => now()->toISOString()
-        ]);
-        
-        $results['direct_pusher'] = [
+        $results['laravel_broadcast'] = [
             'success' => true,
-            'message' => 'Direct Pusher works!',
-            'result' => $result
+            'message' => 'Laravel broadcast with Ably works!',
+            'data' => [
+                'message' => 'Ably WebSocket test successful!',
+                'timestamp' => now()->toISOString(),
+                'server' => request()->getHost()
+            ]
         ];
         
     } catch (\Exception $e) {
-        $results['direct_pusher'] = [
+        $results['laravel_broadcast'] = [
             'success' => false,
-            'error' => $e->getMessage()
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
         ];
     }
     
-    // Test 2: Laravel broadcast helper
+    // Test 2: Configuration check
     try {
-        Log::info("Testing Laravel broadcast helper");
-        
-        // Create a test user with proper attributes
-        $testUser = new \App\Models\Users\User();
-        $testUser->setAttribute('id', 999);
-        $testUser->setAttribute('name', 'Test User');
-        
-        $broadcastResult = broadcast(new \App\Events\Chat\UserTyping(
-            $testUser,
-            999,
-            true
-        ));
-        
-        $results['laravel_broadcast'] = [
-            'success' => true,
-            'message' => 'Laravel broadcast works!',
-            'result' => 'Broadcast sent successfully'
+        $results['configuration'] = [
+            'broadcaster' => config('broadcasting.default'),
+            'ably_key_configured' => !empty(config('broadcasting.connections.ably.key')),
+            'ably_key_prefix' => substr(config('broadcasting.connections.ably.key', ''), 0, 10) . '...',
         ];
         
     } catch (\Exception $e) {
-        $results['laravel_broadcast'] = [
-            'success' => false,
+        $results['configuration'] = [
             'error' => $e->getMessage()
         ];
     }
     
     return response()->json([
-        'message' => 'Pusher and Laravel broadcasting test results',
-        'broadcasting_config' => config('broadcasting'),
+        'message' => 'Ably WebSocket broadcasting test results',
+        'status' => $results['laravel_broadcast']['success'] ? 'success' : 'error',
         'results' => $results
     ]);
 });
+
+// Web-based Ably test page
+Route::get('/test-ably-web', function () {
+    return view('test-ably');
+});
+
+// Broadcast endpoint for web test
+Route::post('/test-ably-broadcast', function () {
+    try {
+        // Broadcast a test event
+        broadcast(new class {
+            public $data;
+            
+            public function __construct() {
+                $this->data = [
+                    'message' => 'Hello from Laravel + Ably!',
+                    'timestamp' => now()->toISOString(),
+                    'from' => 'server'
+                ];
+            }
+            
+            public function broadcastOn() {
+                return ['test-channel'];
+            }
+            
+            public function broadcastAs() {
+                return 'test-event';
+            }
+        });
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Event broadcasted successfully',
+            'data' => [
+                'channel' => 'test-channel',
+                'event' => 'test-event',
+                'timestamp' => now()->toISOString()
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+})->middleware('web');
