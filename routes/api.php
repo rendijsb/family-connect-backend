@@ -1,5 +1,6 @@
 <?php
 
+use Ably\AblyRest;
 use App\Http\Controllers\Broadcasting\BroadcastController;
 use App\Http\Routes\Api\Auth\AuthRoutes;
 use App\Http\Routes\Api\Chat\ChatRoutes;
@@ -18,7 +19,13 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     ]);
 });
 
-Broadcast::routes(['middleware' => ['auth:sanctum']]);
+Route::post('/broadcasting/auth', function (Request $request) {
+    $ably = new AblyRest(env('ABLY_KEY'));
+
+    return $ably->auth->createTokenRequest([], [
+        'clientId' => $request->user()->id ?? 'guest',
+    ]);
+})->middleware('auth:sanctum');
 
 AuthRoutes::api();
 FamilyRoutes::api();
