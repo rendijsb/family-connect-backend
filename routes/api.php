@@ -22,9 +22,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('/broadcasting/auth', function (Request $request) {
     $ably = new AblyRest(env('ABLY_KEY'));
 
-    return $ably->auth->createTokenRequest([], [
-        'clientId' => $request->user()->id ?? 'guest',
+    $tokenRequest = $ably->auth->createTokenRequest([], [
+        'clientId' => (string) $request->user()->id,
     ]);
+
+    return response()->json($tokenRequest);
 })->middleware('auth:sanctum');
 
 AuthRoutes::api();
