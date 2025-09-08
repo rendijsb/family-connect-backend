@@ -247,3 +247,33 @@ Route::get('/debug-broadcast-config', function() {
         'all_broadcast_connections' => config('broadcasting.connections'),
     ];
 });
+
+Route::get('/debug/chat/{roomId}', function($roomId) {
+    try {
+        $room = \App\Models\Chat\ChatRoom::find($roomId);
+        if (!$room) {
+            return response()->json(['error' => 'Room not found'], 404);
+        }
+
+        return response()->json([
+            'room' => [
+                'id' => $room->getId(),
+                'name' => $room->getName(),
+                'family_id' => $room->getFamilyId(),
+                'is_archived' => $room->getIsArchived(),
+            ],
+            'members_count' => $room->membersRelation()->count(),
+            'messages_count' => \App\Models\Chat\ChatMessage::where('chat_room_id', $roomId)->count(),
+            'pusher_config' => [
+                'app_id' => config('broadcasting.connections.pusher.app_id'),
+                'key' => config('broadcasting.connections.pusher.key'),
+                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ], 500);
+    }
+})->middleware(['web', 'auth']);

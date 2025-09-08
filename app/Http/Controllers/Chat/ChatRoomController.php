@@ -22,6 +22,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class ChatRoomController extends Controller
@@ -244,37 +245,68 @@ class ChatRoomController extends Controller
 
     public function typing(Request $request, string $family_slug, ChatRoom $room): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
-        /** @var Family $family */
-        $family = $request->get('_family');
+        try {
+            /** @var User $user */
+            $user = $request->user();
+            /** @var Family $family */
+            $family = $request->get('_family');
 
-        if ($room->getFamilyId() !== $family->getId()) {
+            Log::info('Typing indicator request', [
+                'room_id' => $room->getId(),
+                'user_id' => $user->getId(),
+                'family_id' => $family->getId()
+            ]);
+
+            if ($room->getFamilyId() !== $family->getId()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Chat room not found.'
+                ], 404);
+            }
+
+            if (!$room->isMember($user)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not a member of this chat room.'
+                ], 403);
+            }
+
+            $request->validate([
+                'isTyping' => 'boolean'
+            ]);
+
+            $isTyping = $request->boolean('isTyping', true);
+
+            // Try broadcasting - don't fail the request if broadcasting fails
+            try {
+                broadcast(new UserTyping($user, $room->getId(), $isTyping));
+                Log::info('Typing indicator broadcast successful');
+            } catch (\Exception $e) {
+                Log::error('Failed to broadcast typing indicator', [
+                    'room_id' => $room->getId(),
+                    'user_id' => $user->getId(),
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the request
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Typing indicator sent.'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error sending typing indicator', [
+                'room_id' => $room->getId() ?? 'unknown',
+                'user_id' => $request->user()?->getId() ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Chat room not found.'
-            ], 404);
+                'message' => 'Failed to send typing indicator'
+            ], 500);
         }
-
-        if (!$room->isMember($user)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You are not a member of this chat room.'
-            ], 403);
-        }
-
-        $request->validate([
-            'isTyping' => 'boolean'
-        ]);
-
-        $isTyping = $request->boolean('isTyping', true);
-
-        broadcast(new UserTyping($user, $room->getId(), $isTyping));
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Typing indicator sent.'
-        ]);
     }
 
     /**

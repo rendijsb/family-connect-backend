@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Chat\ChatMessage;
+use App\Models\Chat\ChatRoom;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\ServiceProvider;
@@ -27,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('message', function (string $value) {
             return ChatMessage::with(ChatMessage::CHAT_ROOM_RELATION)->findOrFail($value);
         });
+
+        Route::bind('room', function (string $value) {
+            return ChatRoom::with(['membersRelation', 'familyRelation'])->findOrFail($value);
+        });
+
         require base_path('routes/channels.php');
     }
 }

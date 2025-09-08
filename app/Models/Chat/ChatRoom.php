@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * @mixin Builder
@@ -242,17 +243,32 @@ class ChatRoom extends Model
 
     public function markAsRead(User $user): void
     {
-        $this->membersRelation()  // ← Use relation, not collection
-        ->where(ChatRoomMember::USER_ID, $user->getId())
-            ->update([
-                ChatRoomMember::LAST_READ_AT => now(),
-                ChatRoomMember::UNREAD_COUNT => 0,
+        try {
+            $this->membersRelation()
+                ->where(ChatRoomMember::USER_ID, $user->getId())
+                ->update([
+                    ChatRoomMember::LAST_READ_AT => now(),
+                    ChatRoomMember::UNREAD_COUNT => 0,
+                ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to mark room as read', [
+                'room_id' => $this->getId(),
+                'user_id' => $user->getId(),
+                'error' => $e->getMessage()
             ]);
+        }
     }
 
     public function updateLastMessageAt(): void
     {
-        $this->update([self::LAST_MESSAGE_AT => now()]);
+        try {
+            $this->update([self::LAST_MESSAGE_AT => now()]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update last message timestamp', [
+                'room_id' => $this->getId(),
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     public function toggleMemberAdmin(User $user): bool
