@@ -33,7 +33,6 @@ return [
             ],
             'client_options' => [
                 'cluster' => env('PUSHER_APP_CLUSTER'),
-                'mt1' => false,
             ],
         ],
 
