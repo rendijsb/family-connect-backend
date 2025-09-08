@@ -19,7 +19,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     ]);
 });
 
-Route::post('/broadcasting/auth', function (Request $request) {
+Route::get('/broadcasting/auth', function (Request $request) {
     $ably = new AblyRest(env('ABLY_KEY'));
 
     return $ably->auth->createTokenRequest([], [
