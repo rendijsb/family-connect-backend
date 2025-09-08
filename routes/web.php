@@ -214,3 +214,56 @@ Route::get('/test-laravel-working', function () {
         'laravel_version' => app()->version()
     ]);
 });
+
+// Test Pusher configuration
+Route::get('/test-pusher', function () {
+    try {
+        Log::info('Testing Pusher configuration...');
+        
+        $pusher = new \Pusher\Pusher(
+            config('broadcasting.connections.pusher.key'),
+            config('broadcasting.connections.pusher.secret'),
+            config('broadcasting.connections.pusher.app_id'),
+            config('broadcasting.connections.pusher.options')
+        );
+        
+        Log::info('Pusher instance created successfully');
+        
+        // Test a simple trigger
+        $result = $pusher->trigger('test-channel', 'test-event', [
+            'message' => 'Test message',
+            'timestamp' => now()->toISOString()
+        ]);
+        
+        Log::info('Pusher trigger successful', ['result' => $result]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Pusher configuration is working',
+            'result' => $result,
+            'config' => [
+                'app_id' => config('broadcasting.connections.pusher.app_id'),
+                'key' => config('broadcasting.connections.pusher.key'),
+                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+                'host' => config('broadcasting.connections.pusher.options.host'),
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Pusher test failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'config' => [
+                'app_id' => config('broadcasting.connections.pusher.app_id'),
+                'key' => config('broadcasting.connections.pusher.key'),
+                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
+                'host' => config('broadcasting.connections.pusher.options.host'),
+            ]
+        ], 500);
+    }
+});
