@@ -31,7 +31,7 @@ class PushNotificationService
     {
         try {
             // Get all room members except the sender
-            $roomMemberIds = $room->members()
+            $roomMemberIds = $room->membersRelation()
                 ->where('user_id', '!=', $message->getUserId())
                 ->pluck('user_id')
                 ->toArray();
