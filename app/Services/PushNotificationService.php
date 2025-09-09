@@ -29,6 +29,12 @@ class PushNotificationService
 
     public function sendMessageNotification(ChatMessage $message, ChatRoom $room): void
     {
+        Log::info('PushNotificationService::sendMessageNotification called', [
+            'message_id' => $message->getId(),
+            'room_id' => $room->getId(),
+            'sender_id' => $message->getUserId()
+        ]);
+        
         try {
             // Get all room members except the sender
             $roomMemberIds = $room->membersRelation()
@@ -36,7 +42,14 @@ class PushNotificationService
                 ->pluck('user_id')
                 ->toArray();
 
+            Log::info('Room member IDs found', [
+                'room_id' => $room->getId(),
+                'member_ids' => $roomMemberIds,
+                'count' => count($roomMemberIds)
+            ]);
+
             if (empty($roomMemberIds)) {
+                Log::info('No room members found, skipping notifications', ['room_id' => $room->getId()]);
                 return;
             }
 
@@ -44,6 +57,16 @@ class PushNotificationService
             $deviceTokens = DeviceToken::whereIn('user_id', $roomMemberIds)
                 ->active()
                 ->get();
+
+            Log::info('Device tokens found', [
+                'room_id' => $room->getId(),
+                'token_count' => $deviceTokens->count(),
+                'tokens' => $deviceTokens->map(fn($t) => [
+                    'user_id' => $t->getUserId(),
+                    'device_type' => $t->getDeviceType(),
+                    'token_preview' => substr($t->getToken(), 0, 20) . '...'
+                ])->toArray()
+            ]);
 
             if ($deviceTokens->isEmpty()) {
                 Log::info('No device tokens found for room members', [
