@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Users;
 
 use App\Enums\Roles\RoleEnum;
+use App\Models\Families\Family;
 use App\Models\Families\FamilyMember;
 use App\Models\Roles\Role;
 use Carbon\Carbon;
@@ -12,6 +13,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -91,6 +93,13 @@ class User extends Authenticatable
     public function roleRelation(): BelongsTo
     {
         return $this->belongsTo(Role::class, self::ROLE_ID, Role::ID);
+    }
+
+    public function families(): BelongsToMany
+    {
+        return $this->belongsToMany(Family::class, 'family_members', 'user_id', 'family_id')
+                    ->withPivot('role', 'joined_at')
+                    ->withTimestamps();
     }
 
     /** @return Collection<FamilyMember> */

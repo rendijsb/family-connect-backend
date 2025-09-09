@@ -6,6 +6,7 @@ namespace App\Models\Families;
 
 use App\Enums\Families\FamilyPrivacyEnum;
 use App\Models\Users\User;
+use App\Models\Photos\PhotoAlbum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -73,6 +74,11 @@ class Family extends Model
     public function membersRelation(): HasMany
     {
         return $this->hasMany(FamilyMember::class, FamilyMember::FAMILY_ID, self::ID);
+    }
+
+    public function photoAlbums(): HasMany
+    {
+        return $this->hasMany(PhotoAlbum::class);
     }
 
     public function relatedOwner(): User

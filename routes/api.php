@@ -33,3 +33,6 @@ AuthRoutes::api();
 FamilyRoutes::api();
 FamilyMemberRoutes::api();
 ChatRoutes::api();
+
+// Photo API Routes
+require __DIR__.'/api-photos.php';
