@@ -40,7 +40,7 @@ class ChatRoomResource extends JsonResource
 
             // Relations
             'creator' => $this->whenLoaded('creator', fn() => new UserResource($this->resource->relatedCreator())),
-            'lastMessage' => $this->whenLoaded('lastMessage', fn() => new ChatMessageResource($this->resource->relatedLastMessage())),
+            'lastMessage' => $this->whenLoaded('lastMessageRelation', fn() => new ChatMessageResource($this->resource->relatedLastMessage())),
             'members' => $this->whenLoaded('members', fn() => ChatRoomMemberResource::collection($this->resource->relatedMembers())),
         ];
     }
