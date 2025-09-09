@@ -117,6 +117,10 @@ class PushNotificationService
                 $payload['message']['apns'] = [
                     'payload' => [
                         'aps' => [
+                            'alert' => [
+                                'title' => $notificationData['title'],
+                                'body' => $notificationData['body']
+                            ],
                             'sound' => 'default',
                             'badge' => 1
                         ]
@@ -150,12 +154,21 @@ class PushNotificationService
         }
 
         try {
-            if (empty($this->serviceAccountPath) || !file_exists($this->serviceAccountPath)) {
-                Log::error('Service account file not found', ['path' => $this->serviceAccountPath]);
+            // Handle both absolute and relative paths
+            $filePath = $this->serviceAccountPath;
+            if (!str_starts_with($filePath, '/')) {
+                $filePath = base_path($filePath);
+            }
+            
+            if (empty($this->serviceAccountPath) || !file_exists($filePath)) {
+                Log::error('Service account file not found', [
+                    'original_path' => $this->serviceAccountPath,
+                    'resolved_path' => $filePath
+                ]);
                 return null;
             }
 
-            $serviceAccount = json_decode(file_get_contents($this->serviceAccountPath), true);
+            $serviceAccount = json_decode(file_get_contents($filePath), true);
             
             // Create JWT for OAuth
             $now = time();
