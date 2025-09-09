@@ -101,15 +101,24 @@ class TestNotificationController extends Controller
 
     public function checkConfig(): JsonResponse
     {
+        $serviceAccountPath = config('services.fcm.service_account_path', '');
+        
+        // Handle both absolute and relative paths
+        $resolvedPath = $serviceAccountPath;
+        if (!empty($serviceAccountPath) && !str_starts_with($serviceAccountPath, '/')) {
+            $resolvedPath = base_path($serviceAccountPath);
+        }
+        
         $config = [
             'fcm_project_id' => config('services.fcm.project_id'),
-            'service_account_path' => config('services.fcm.service_account_path'),
-            'service_account_exists' => file_exists(config('services.fcm.service_account_path', '')),
+            'service_account_path' => $serviceAccountPath,
+            'resolved_path' => $resolvedPath,
+            'service_account_exists' => !empty($resolvedPath) && file_exists($resolvedPath),
         ];
 
         if ($config['service_account_exists']) {
             try {
-                $serviceAccount = json_decode(file_get_contents($config['service_account_path']), true);
+                $serviceAccount = json_decode(file_get_contents($resolvedPath), true);
                 $config['service_account_project_id'] = $serviceAccount['project_id'] ?? 'missing';
                 $config['service_account_client_email'] = $serviceAccount['client_email'] ?? 'missing';
             } catch (\Exception $e) {
