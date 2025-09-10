@@ -6,7 +6,9 @@ namespace App\Events\Chat;
 
 use App\Http\Resources\Chat\ChatMessageResource;
 use App\Models\Chat\ChatMessage;
+use App\Models\Chat\ChatRoom;
 use App\Models\Users\User;
+use App\Services\PushNotificationService;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -28,6 +30,9 @@ class MessageSent implements ShouldBroadcastNow
             ChatMessage::REACTIONS_RELATION,
             ChatMessage::REACTIONS_RELATION . '.userRelation' . ':' . User::ID . ',' . User::NAME . ',' . User::EMAIL,
         ]);
+
+        // Send push notifications
+        $this->sendPushNotifications();
     }
 
     public function broadcastOn(): array
@@ -52,5 +57,18 @@ class MessageSent implements ShouldBroadcastNow
     public function shouldQueue(): bool
     {
         return false;
+    }
+
+    private function sendPushNotifications(): void
+    {
+        try {
+            $room = ChatRoom::find($this->message->getChatRoomId());
+            if ($room) {
+                app(PushNotificationService::class)->sendMessageNotification($this->message, $room);
+            }
+        } catch (\Exception $e) {
+            // Don't fail the broadcast if push notifications fail
+            \Log::error('Push notification failed in MessageSent event', ['error' => $e->getMessage()]);
+        }
     }
 }

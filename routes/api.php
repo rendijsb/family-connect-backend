@@ -2,6 +2,8 @@
 
 use Ably\AblyRest;
 use App\Http\Controllers\Broadcasting\BroadcastController;
+use App\Http\Controllers\DeviceTokenController;
+use App\Http\Controllers\TestNotificationController;
 use App\Http\Routes\Api\Auth\AuthRoutes;
 use App\Http\Routes\Api\Chat\ChatRoutes;
 use App\Http\Routes\Api\Family\FamilyMemberRoutes;
@@ -28,6 +30,17 @@ Route::get('/broadcasting/auth', function (Request $request) {
 
     return response()->json($tokenRequest);
 })->middleware('auth:sanctum');
+
+// Device token routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/device-tokens', [DeviceTokenController::class, 'store']);
+    Route::delete('/device-tokens', [DeviceTokenController::class, 'destroy']);
+    
+    // Debug/Test routes (remove in production)
+    Route::post('/test-notification', [TestNotificationController::class, 'testNotification']);
+    Route::get('/device-tokens/list', [TestNotificationController::class, 'getDeviceTokens']);
+    Route::get('/notification-config', [TestNotificationController::class, 'checkConfig']);
+});
 
 AuthRoutes::api();
 FamilyRoutes::api();
